@@ -35,13 +35,15 @@ export const BlogSection: React.FC = () => {
               
               {/* Image Container */}
               <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
-                <img
+                <motion.img
+                  whileHover={{ scale: 1.08, rotate: index % 2 === 0 ? 0.6 : -0.6 }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                   src={post.image}
                   alt={post.title}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover object-center cursor-pointer"
                   referrerPolicy="no-referrer"
                 />
-                <span className="absolute top-4 left-4 bg-white/90 backdrop-blur-xs px-3 py-1 rounded-full text-[10px] font-bold text-[#0B6B3A] uppercase tracking-wider">
+                <span className="absolute top-4 left-4 bg-white/90 backdrop-blur-xs px-3 py-1 rounded-full text-[10px] font-bold text-[#0B6B3A] uppercase tracking-wider z-10">
                   {post.category}
                 </span>
               </div>
@@ -144,7 +146,14 @@ export const BlogSection: React.FC = () => {
 
                 {/* Cover Image */}
                 <div className="rounded-2xl overflow-hidden aspect-[16/9] w-full bg-gray-100 shadow-inner">
-                  <img src={activePost.image} alt={activePost.title} className="w-full h-full object-cover object-center" referrerPolicy="no-referrer" />
+                  <motion.img
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    src={activePost.image}
+                    alt={activePost.title}
+                    className="w-full h-full object-cover object-center cursor-zoom-in"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
 
                 {/* Article Prose Body */}

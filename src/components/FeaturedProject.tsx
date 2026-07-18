@@ -80,20 +80,25 @@ export const FeaturedProject: React.FC<FeaturedProjectProps> = ({ onOpenQuote })
               whileInView={{ clipPath: 'inset(0 0% 0 0)' }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.9, ease: [0.76, 0, 0.24, 1] }}
-              className="w-full h-full relative"
+              whileHover="hover"
+              className="w-full h-full relative overflow-hidden"
             >
-              <img
+              <motion.img
+                variants={{
+                  hover: { scale: 1.07, rotate: 0.5 }
+                }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                 src={project.image}
                 alt={project.title}
-                className="w-full h-full object-cover object-center"
+                className="w-full h-full object-cover object-center cursor-zoom-in"
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-black/5 opacity-10 hover:opacity-0 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-black/5 opacity-10 hover:opacity-0 transition-opacity duration-500 pointer-events-none" />
             </motion.div>
 
             {/* floating badge */}
             {project.badge && (
-              <div className="absolute bottom-5 left-5 bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-3 border border-[#E3DEC9] shadow-md">
+              <div className="absolute bottom-5 left-5 bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-3 border border-[#E3DEC9] shadow-md z-10">
                 <p className="font-serif font-extrabold text-lg text-[#0F1A12]">
                   {project.year}
                 </p>
@@ -129,11 +134,13 @@ export const FeaturedProject: React.FC<FeaturedProjectProps> = ({ onOpenQuote })
               className="fixed inset-y-0 right-0 w-full md:max-w-3xl bg-[#FCFCFA] border-l border-[#E3DEC9] z-50 flex flex-col shadow-2xl overflow-hidden"
             >
               {/* Image banner header */}
-              <div className="h-64 md:h-80 relative shrink-0">
-                <img
+              <div className="h-64 md:h-80 relative shrink-0 overflow-hidden group">
+                <motion.img
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
                   src={project.image}
                   alt={project.title}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-cover object-center cursor-zoom-in"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#FCFCFA] via-transparent to-black/40" />

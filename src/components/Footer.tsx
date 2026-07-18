@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, Clock, Facebook, Instagram, Twitter, Youtube, Heart, Sparkles } from 'lucide-react';
 import { service1Img, service2Img, service3Img, heroImg, featuredImg, mowerHeroImg } from '../data';
 import { VerdaraLogo } from './VerdaraLogo';
@@ -102,13 +103,15 @@ export const Footer: React.FC = () => {
                   key={index}
                   className="aspect-square rounded-lg overflow-hidden border border-white/5 bg-white/5 group relative cursor-pointer"
                 >
-                  <img
+                  <motion.img
+                    whileHover={{ scale: 1.15, rotate: index % 2 === 0 ? 1 : -1 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
                     src={photo}
                     alt={`Garden work instagram ${index}`}
-                    className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
+                    className="w-full h-full object-cover object-center"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                     <span className="text-[9px] font-bold text-white uppercase tracking-widest">VIEW</span>
                   </div>
                 </div>

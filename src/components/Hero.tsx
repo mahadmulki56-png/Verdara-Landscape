@@ -203,9 +203,14 @@ export const Hero: React.FC<HeroProps> = ({ onOpenQuote, onViewWork }) => {
           {/* Main Luxury Garden Design Image */}
           <motion.div 
             variants={itemVariants}
-            className="relative rounded-[2.5rem] overflow-hidden w-full max-w-[450px] aspect-[4/5] bg-[#F4EFEA] border-[6px] border-white/20 shadow-2xl"
+            whileHover="hover"
+            className="relative rounded-[2.5rem] overflow-hidden w-full max-w-[450px] aspect-[4/5] bg-[#F4EFEA] border-[6px] border-white/20 shadow-2xl cursor-pointer group"
           >
-            <img
+            <motion.img
+              variants={{
+                hover: { scale: 1.08, rotate: -0.5 }
+              }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
               src={heroImg}
               alt="Luxury garden landscape architecture by Verdara Landscapes"
               className="w-full h-full object-cover object-center"
@@ -220,8 +225,9 @@ export const Hero: React.FC<HeroProps> = ({ onOpenQuote, onViewWork }) => {
             className="absolute top-8 -left-4 md:-left-8 z-10"
           >
             <motion.div
+              whileHover={{ scale: 1.05, y: -4 }}
               animate={float1}
-              className="bg-white/95 backdrop-blur-md p-4 rounded-3xl border border-[#E3DEC9] shadow-xl flex items-center gap-3.5 max-w-[210px] select-none"
+              className="bg-white/95 backdrop-blur-md p-4 rounded-3xl border border-[#E3DEC9] shadow-xl flex items-center gap-3.5 max-w-[210px] select-none cursor-pointer transition-shadow hover:shadow-2xl"
             >
               <div className="w-10 h-10 rounded-2xl bg-[#0B6B3A] flex items-center justify-center text-white shrink-0 shadow-md">
                 <Award className="w-5 h-5 text-[#D1A153]" />
@@ -246,11 +252,14 @@ export const Hero: React.FC<HeroProps> = ({ onOpenQuote, onViewWork }) => {
             className="absolute -bottom-4 -right-2 z-10"
           >
             <motion.div
+              whileHover={{ scale: 1.04, y: -4 }}
               animate={float2}
-              className="bg-white/95 backdrop-blur-md p-3.5 rounded-3xl border border-[#E3DEC9] shadow-2xl flex items-center gap-3 max-w-[240px] select-none"
+              className="bg-white/95 backdrop-blur-md p-3.5 rounded-3xl border border-[#E3DEC9] shadow-2xl flex items-center gap-3 max-w-[240px] select-none cursor-pointer transition-shadow hover:shadow-2xl"
             >
-              <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-[#E3DEC9]">
-                <img
+              <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-[#E3DEC9] group/thumb">
+                <motion.img
+                  whileHover={{ scale: 1.15, rotate: -2 }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
                   src={featuredImg}
                   alt="Mini project thumbnail"
                   className="w-full h-full object-cover"

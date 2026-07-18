@@ -84,8 +84,8 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuote }) => {
               {/* Image Top */}
               <div className="h-[240px] overflow-hidden relative">
                 <motion.img
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                  whileHover={{ scale: 1.08, rotate: index % 2 === 0 ? 0.6 : -0.6 }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                   src={service.image}
                   alt={service.title}
                   className="w-full h-full object-cover object-center cursor-pointer"
@@ -145,11 +145,13 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuote }) => {
               className="fixed inset-x-4 bottom-4 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 max-w-2xl bg-background border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[85vh] md:max-h-[90vh]"
             >
               {/* Image banner */}
-              <div className="h-48 md:h-64 relative shrink-0">
-                <img
+              <div className="h-48 md:h-64 relative shrink-0 overflow-hidden">
+                <motion.img
+                  whileHover={{ scale: 1.06 }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
                   src={selectedService.image}
                   alt={selectedService.title}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-cover object-center cursor-zoom-in"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-black/20 to-black/30" />
