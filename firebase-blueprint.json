@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "ContactSubmission": {
+      "title": "ContactSubmission",
+      "description": "General user contact and comment submissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 128 },
+        "subject": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 5000 },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "replied", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "phone", "subject", "message", "status", "createdAt"]
+    },
+    "QuoteRequest": {
+      "title": "QuoteRequest",
+      "description": "Project estimation and design quote requests",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 128 },
+        "projectType": { "type": "string", "maxLength": 128 },
+        "budget": { "type": "string", "maxLength": 128 },
+        "timeline": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 5000 },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "approved", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "phone", "projectType", "budget", "timeline", "message", "status", "createdAt"]
+    },
+    "AppointmentBooking": {
+      "title": "AppointmentBooking",
+      "description": "Consultation bookings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 128 },
+        "serviceType": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 128 },
+        "timeSlot": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 5000 },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled", "completed", "archived"] },
+        "googleEventId": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "phone", "serviceType", "date", "timeSlot", "message", "status", "createdAt"]
+    },
+    "EmailLog": {
+      "title": "EmailLog",
+      "description": "Branded system outbox audit logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "to": { "type": "string", "maxLength": 128 },
+        "subject": { "type": "string", "maxLength": 256 },
+        "body": { "type": "string", "maxLength": 100000 },
+        "html": { "type": "string", "maxLength": 200000 },
+        "type": { "type": "string", "enum": ["customer_confirmation", "business_notification"] },
+        "sentAt": { "type": "string", "format": "date-time" },
+        "success": { "type": "boolean" },
+        "simulated": { "type": "boolean" },
+        "error": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "to", "subject", "body", "type", "sentAt", "success"]
+    }
+  },
+  "firestore": {
+    "contacts": {
+      "schema": "ContactSubmission",
+      "description": "Collection of contact submission documents"
+    },
+    "quotes": {
+      "schema": "QuoteRequest",
+      "description": "Collection of quote design request documents"
+    },
+    "appointments": {
+      "schema": "AppointmentBooking",
+      "description": "Collection of appointment consultation bookings"
+    },
+    "emails": {
+      "schema": "EmailLog",
+      "description": "Collection of outbound emails"
+    }
+  }
+}
