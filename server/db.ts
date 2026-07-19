@@ -3,6 +3,7 @@ import path from 'path';
 import { ContactSubmission, QuoteRequest, AppointmentBooking, EmailLog } from '../src/types';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { validateContact, validateQuote, validateAppointment } from '../src/lib/validation';
 
 interface DatabaseSchema {
   contacts: ContactSubmission[];
@@ -17,7 +18,11 @@ interface DatabaseSchema {
   };
 }
 
-const DB_DIR = path.resolve(process.cwd(), 'data');
+// Support Vercel's read-only filesystem by redirecting DB to /tmp
+const DB_DIR = process.env.VERCEL 
+  ? '/tmp/data' 
+  : path.resolve(process.cwd(), 'data');
+
 const DB_FILE = path.join(DB_DIR, 'db.json');
 
 const INITIAL_DB: DatabaseSchema = {
@@ -33,37 +38,56 @@ const INITIAL_DB: DatabaseSchema = {
   }
 };
 
-// Safe, atomic JSON Database for AI Studio runtime environment
+// In-Memory fallback cache in case of persistent file write/read blocks
+let memoryCache: DatabaseSchema | null = null;
+
 export class Database {
   private static init() {
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
-    }
-    if (!fs.existsSync(DB_FILE)) {
-      fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DB, null, 2), 'utf-8');
+    try {
+      if (!fs.existsSync(DB_DIR)) {
+        fs.mkdirSync(DB_DIR, { recursive: true });
+      }
+      if (!fs.existsSync(DB_FILE)) {
+        fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DB, null, 2), 'utf-8');
+      }
+    } catch (e) {
+      console.warn('[Server DB] File system setup warning (filesystem may be read-only):', e);
     }
   }
 
   static read(): DatabaseSchema {
+    if (memoryCache) {
+      return memoryCache;
+    }
+
     this.init();
     try {
-      const data = fs.readFileSync(DB_FILE, 'utf-8');
-      return JSON.parse(data);
+      if (fs.existsSync(DB_FILE)) {
+        const data = fs.readFileSync(DB_FILE, 'utf-8');
+        memoryCache = JSON.parse(data);
+        return memoryCache!;
+      }
     } catch (e) {
-      console.error('Error reading database file, returning default:', e);
-      return INITIAL_DB;
+      console.warn('[Server DB] Reading local db.json failed, using initial structure:', e);
     }
+
+    memoryCache = { ...INITIAL_DB };
+    return memoryCache;
   }
 
   static write(data: DatabaseSchema) {
+    // Always sync memory cache
+    memoryCache = data;
+
     this.init();
     try {
-      // Write to temporary file first, then rename for atomic safety
       const tempFile = `${DB_FILE}.tmp`;
       fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
       fs.renameSync(tempFile, DB_FILE);
+      console.log('[Server DB] Locally saved db.json successfully.');
     } catch (e) {
-      console.error('Error writing to database file:', e);
+      // Catch and log filesystem errors gracefully, do NOT crash the server
+      console.warn('[Server DB] Writing local db.json blocked by environment. Fallback to memory-state:', e);
     }
   }
 
@@ -80,6 +104,15 @@ export class Database {
   }
 
   static addContact(contact: Omit<ContactSubmission, 'id' | 'createdAt' | 'status'>): ContactSubmission {
+    console.log('[Server DB] [addContact] validating schema for:', JSON.stringify(contact, null, 2));
+    
+    // Server-side validation check
+    const validation = validateContact(contact);
+    if (!validation.isValid) {
+      console.error('[Server DB] [addContact] Schema validation failed:', validation.error);
+      throw new Error(`Validation Error: ${validation.error}`);
+    }
+
     const dbData = this.read();
     const newContact: ContactSubmission = {
       ...contact,
@@ -90,10 +123,18 @@ export class Database {
     dbData.contacts.unshift(newContact);
     this.write(dbData);
 
+    console.log('[Server DB] [addContact] payload saved to database. Starting async Firestore write...');
+
     // Save to Firestore asynchronously
     setDoc(doc(db, 'contacts', newContact.id), newContact)
       .then(() => console.log(`[Firestore] Contact ${newContact.id} saved successfully.`))
-      .catch((err) => handleFirestoreError(err, OperationType.WRITE, `contacts/${newContact.id}`));
+      .catch((err) => {
+        console.error(`[Firestore Error] Failed saving contact ${newContact.id}:`, err);
+        // Safely capture to standard formatted outbox
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `contacts/${newContact.id}`);
+        } catch (ignored) {}
+      });
 
     return newContact;
   }
@@ -105,10 +146,17 @@ export class Database {
       dbData.contacts[index].status = status;
       this.write(dbData);
 
+      console.log(`[Server DB] Updating contact ${id} status to ${status} in Firestore.`);
+
       // Save to Firestore asynchronously
       updateDoc(doc(db, 'contacts', id), { status })
         .then(() => console.log(`[Firestore] Contact ${id} status updated to ${status}.`))
-        .catch((err) => handleFirestoreError(err, OperationType.UPDATE, `contacts/${id}`));
+        .catch((err) => {
+          console.error(`[Firestore Error] Failed updating contact status ${id}:`, err);
+          try {
+            handleFirestoreError(err, OperationType.UPDATE, `contacts/${id}`);
+          } catch (ignored) {}
+        });
 
       return dbData.contacts[index];
     }
@@ -121,6 +169,15 @@ export class Database {
   }
 
   static addQuote(quote: Omit<QuoteRequest, 'id' | 'createdAt' | 'status'>): QuoteRequest {
+    console.log('[Server DB] [addQuote] validating schema for:', JSON.stringify(quote, null, 2));
+
+    // Server-side validation check
+    const validation = validateQuote(quote);
+    if (!validation.isValid) {
+      console.error('[Server DB] [addQuote] Schema validation failed:', validation.error);
+      throw new Error(`Validation Error: ${validation.error}`);
+    }
+
     const dbData = this.read();
     const newQuote: QuoteRequest = {
       ...quote,
@@ -131,10 +188,17 @@ export class Database {
     dbData.quotes.unshift(newQuote);
     this.write(dbData);
 
+    console.log('[Server DB] [addQuote] payload saved to database. Starting async Firestore write...');
+
     // Save to Firestore asynchronously
     setDoc(doc(db, 'quotes', newQuote.id), newQuote)
       .then(() => console.log(`[Firestore] Quote ${newQuote.id} saved successfully.`))
-      .catch((err) => handleFirestoreError(err, OperationType.WRITE, `quotes/${newQuote.id}`));
+      .catch((err) => {
+        console.error(`[Firestore Error] Failed saving quote request ${newQuote.id}:`, err);
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `quotes/${newQuote.id}`);
+        } catch (ignored) {}
+      });
 
     return newQuote;
   }
@@ -146,10 +210,17 @@ export class Database {
       dbData.quotes[index].status = status;
       this.write(dbData);
 
+      console.log(`[Server DB] Updating quote ${id} status to ${status} in Firestore.`);
+
       // Save to Firestore asynchronously
       updateDoc(doc(db, 'quotes', id), { status })
         .then(() => console.log(`[Firestore] Quote ${id} status updated to ${status}.`))
-        .catch((err) => handleFirestoreError(err, OperationType.UPDATE, `quotes/${id}`));
+        .catch((err) => {
+          console.error(`[Firestore Error] Failed updating quote status ${id}:`, err);
+          try {
+            handleFirestoreError(err, OperationType.UPDATE, `quotes/${id}`);
+          } catch (ignored) {}
+        });
 
       return dbData.quotes[index];
     }
@@ -162,6 +233,15 @@ export class Database {
   }
 
   static addAppointment(apt: Omit<AppointmentBooking, 'id' | 'createdAt' | 'status'>): AppointmentBooking {
+    console.log('[Server DB] [addAppointment] validating schema for:', JSON.stringify(apt, null, 2));
+
+    // Server-side validation check
+    const validation = validateAppointment(apt);
+    if (!validation.isValid) {
+      console.error('[Server DB] [addAppointment] Schema validation failed:', validation.error);
+      throw new Error(`Validation Error: ${validation.error}`);
+    }
+
     const dbData = this.read();
     const newApt: AppointmentBooking = {
       ...apt,
@@ -172,10 +252,17 @@ export class Database {
     dbData.appointments.unshift(newApt);
     this.write(dbData);
 
+    console.log('[Server DB] [addAppointment] payload saved to database. Starting async Firestore write...');
+
     // Save to Firestore asynchronously
     setDoc(doc(db, 'appointments', newApt.id), newApt)
       .then(() => console.log(`[Firestore] Appointment ${newApt.id} saved successfully.`))
-      .catch((err) => handleFirestoreError(err, OperationType.WRITE, `appointments/${newApt.id}`));
+      .catch((err) => {
+        console.error(`[Firestore Error] Failed saving appointment ${newApt.id}:`, err);
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `appointments/${newApt.id}`);
+        } catch (ignored) {}
+      });
 
     return newApt;
   }
@@ -187,6 +274,8 @@ export class Database {
       dbData.appointments[index] = { ...dbData.appointments[index], ...updates };
       this.write(dbData);
 
+      console.log(`[Server DB] Updating appointment ${id} with updates:`, JSON.stringify(updates, null, 2));
+
       // Save to Firestore asynchronously
       const validUpdates: any = {};
       if (updates.status !== undefined) validUpdates.status = updates.status;
@@ -195,7 +284,12 @@ export class Database {
       if (Object.keys(validUpdates).length > 0) {
         updateDoc(doc(db, 'appointments', id), validUpdates)
           .then(() => console.log(`[Firestore] Appointment ${id} successfully synchronized with Google/Status updates.`))
-          .catch((err) => handleFirestoreError(err, OperationType.UPDATE, `appointments/${id}`));
+          .catch((err) => {
+            console.error(`[Firestore Error] Failed updating appointment ${id}:`, err);
+            try {
+              handleFirestoreError(err, OperationType.UPDATE, `appointments/${id}`);
+            } catch (ignored) {}
+          });
       }
 
       return dbData.appointments[index];
@@ -225,7 +319,12 @@ export class Database {
     // Save to Firestore asynchronously
     setDoc(doc(db, 'emails', newLog.id), newLog)
       .then(() => console.log(`[Firestore] Email Log ${newLog.id} saved successfully.`))
-      .catch((err) => handleFirestoreError(err, OperationType.WRITE, `emails/${newLog.id}`));
+      .catch((err) => {
+        console.error(`[Firestore Error] Failed saving email log ${newLog.id}:`, err);
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `emails/${newLog.id}`);
+        } catch (ignored) {}
+      });
 
     return newLog;
   }

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, Clock, Calendar, CheckCircle, Send, Sparkles, MessageSquare, AlertCircle } from 'lucide-react';
+import { FirebaseClientService } from '../lib/firebaseClient';
+import { validateAppointment, validateContact } from '../lib/validation';
 
 type ActiveTabType = 'appointment' | 'contact';
 
@@ -49,6 +51,17 @@ export const Consultation: React.FC = () => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    // Validate payload client-side first
+    const validation = validateAppointment(appointmentForm);
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Please fill in all details correctly.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    let apiFailed = false;
+    let apiErrorMsg = '';
+
     try {
       const response = await fetch('/api/submissions/appointment', {
         method: 'POST',
@@ -59,20 +72,38 @@ export const Consultation: React.FC = () => {
         })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to schedule appointment');
+      const contentType = response.headers.get('content-type');
+      if (response.ok && contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        setReferenceId(data.submission?.id || 'VRD-APT-SUCCESS');
+        setIsSuccess(true);
+      } else {
+        apiFailed = true;
+        apiErrorMsg = `Server response status ${response.status}.`;
       }
-
-      setReferenceId(data.submission?.id || 'VRD-APT-SUCCESS');
-      setIsSuccess(true);
     } catch (err: any) {
-      console.error('[Appointment Submit Error]', err);
-      setErrorMessage(err.message || 'Server encountered an error booking your consultation. Please check connection and try again.');
-    } finally {
-      setIsSubmitting(false);
+      console.warn('[Appointment API Failed, checking fallback]', err);
+      apiFailed = true;
+      apiErrorMsg = err.message || '';
     }
+
+    if (apiFailed) {
+      try {
+        console.log('[Consultation] API unavailable, falling back to direct Firestore transaction...');
+        const backupApt = await FirebaseClientService.addAppointmentDirectly({
+          ...appointmentForm
+        });
+        setReferenceId(backupApt.id);
+        setIsSuccess(true);
+      } catch (fallbackErr: any) {
+        console.error('[Appointment Direct Firestore Fallback Failed]', fallbackErr);
+        setErrorMessage(
+          `Unable to schedule appointment. (API Error: ${apiErrorMsg || 'connection issue'}, Backup DB Error: ${fallbackErr.message || 'permission issue'})`
+        );
+      }
+    }
+
+    setIsSubmitting(false);
   };
 
   // Submit Contact Form
@@ -80,6 +111,17 @@ export const Consultation: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage(null);
+
+    // Validate payload client-side first
+    const validation = validateContact(contactForm);
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Please fill in all details correctly.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    let apiFailed = false;
+    let apiErrorMsg = '';
 
     try {
       const response = await fetch('/api/submissions/contact', {
@@ -91,20 +133,38 @@ export const Consultation: React.FC = () => {
         })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit message');
+      const contentType = response.headers.get('content-type');
+      if (response.ok && contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        setReferenceId(data.submission?.id || 'VRD-CON-SUCCESS');
+        setIsSuccess(true);
+      } else {
+        apiFailed = true;
+        apiErrorMsg = `Server response status ${response.status}.`;
       }
-
-      setReferenceId(data.submission?.id || 'VRD-CON-SUCCESS');
-      setIsSuccess(true);
     } catch (err: any) {
-      console.error('[Contact Submit Error]', err);
-      setErrorMessage(err.message || 'Server failed to deliver your message. Please check connection.');
-    } finally {
-      setIsSubmitting(false);
+      console.warn('[Contact API Failed, checking fallback]', err);
+      apiFailed = true;
+      apiErrorMsg = err.message || '';
     }
+
+    if (apiFailed) {
+      try {
+        console.log('[Consultation] API unavailable, falling back to direct Firestore transaction...');
+        const backupContact = await FirebaseClientService.addContactDirectly({
+          ...contactForm
+        });
+        setReferenceId(backupContact.id);
+        setIsSuccess(true);
+      } catch (fallbackErr: any) {
+        console.error('[Contact Direct Firestore Fallback Failed]', fallbackErr);
+        setErrorMessage(
+          `Unable to deliver your message. (API Error: ${apiErrorMsg || 'connection issue'}, Backup DB Error: ${fallbackErr.message || 'permission issue'})`
+        );
+      }
+    }
+
+    setIsSubmitting(false);
   };
 
   const handleReset = () => {

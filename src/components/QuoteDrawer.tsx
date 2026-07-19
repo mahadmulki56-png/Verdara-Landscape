@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CheckCircle, Send, Sparkles, AlertCircle } from 'lucide-react';
 import { QuoteRequest } from '../types';
+import { FirebaseClientService } from '../lib/firebaseClient';
+import { validateQuote } from '../lib/validation';
 
 interface QuoteDrawerProps {
   isOpen: boolean;
@@ -48,11 +50,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({ isOpen, onClose }) => 
 
             const extraList = activeExtras.length > 0 ? ` with programs: ${activeExtras.join(', ')}` : '';
 
+            const extraMessage = `Automated Estimate Applied: $${est.calculatedPrice.toLocaleString()} for a ${est.lawnSize.toLocaleString()} sq ft property area on a ${est.frequency} frequency basis${extraList}.`;
             setFormData(prev => ({
               ...prev,
               projectType: 'Seasonal Maintenance',
               budget: matchingBudget,
-              message: prev.message || `Automated Estimate Applied: $${est.calculatedPrice.toLocaleString()} for a ${est.lawnSize.toLocaleString()} sq ft property area on a ${est.frequency} frequency basis${extraList}.`
+              message: prev.message || extraMessage
             }));
             
             localStorage.removeItem('verdara_active_estimate');
@@ -76,6 +79,17 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({ isOpen, onClose }) => 
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    // Validate payload client-side first
+    const validation = validateQuote(formData);
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Please fill in all details correctly.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    let apiFailed = false;
+    let apiErrorMsg = '';
+
     try {
       const response = await fetch('/api/submissions/quote', {
         method: 'POST',
@@ -86,20 +100,38 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({ isOpen, onClose }) => 
         })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit quote request');
+      const contentType = response.headers.get('content-type');
+      if (response.ok && contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        setReferenceId(data.submission?.id || 'VRD-QTE-SUCCESS');
+        setIsSuccess(true);
+      } else {
+        apiFailed = true;
+        apiErrorMsg = `Server response status ${response.status}.`;
       }
-
-      setReferenceId(data.submission?.id || 'VRD-QTE-SUCCESS');
-      setIsSuccess(true);
     } catch (err: any) {
-      console.error('[Quote Submit Error]', err);
-      setErrorMessage(err.message || 'We encountered an error processing your request. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      console.warn('[Quote API Failed, checking fallback]', err);
+      apiFailed = true;
+      apiErrorMsg = err.message || '';
     }
+
+    if (apiFailed) {
+      try {
+        console.log('[QuoteDrawer] API unavailable, falling back to direct Firestore transaction...');
+        const backupQuote = await FirebaseClientService.addQuoteDirectly({
+          ...formData
+        });
+        setReferenceId(backupQuote.id);
+        setIsSuccess(true);
+      } catch (fallbackErr: any) {
+        console.error('[Quote Direct Firestore Fallback Failed]', fallbackErr);
+        setErrorMessage(
+          `Unable to submit quote request. (API Error: ${apiErrorMsg || 'connection issue'}, Backup DB Error: ${fallbackErr.message || 'permission issue'})`
+        );
+      }
+    }
+
+    setIsSubmitting(false);
   };
 
   const resetForm = () => {

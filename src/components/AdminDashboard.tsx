@@ -4,6 +4,7 @@ import {
   ExternalLink, LogOut, CheckCircle, Clock, AlertTriangle, ChevronRight, Eye, ShieldCheck
 } from 'lucide-react';
 import { AppointmentBooking, QuoteRequest, ContactSubmission, EmailLog } from '../types';
+import { FirebaseClientService } from '../lib/firebaseClient';
 
 interface GoogleConnectionState {
   connected: boolean;
@@ -23,6 +24,9 @@ export const AdminDashboard: React.FC = () => {
     expiry: null
   });
 
+  const [smtpConfigured, setSmtpConfigured] = useState<boolean>(false);
+  const [businessOwnerEmail, setBusinessOwnerEmail] = useState<string>('design@verdaralandscapes.com');
+
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
@@ -30,30 +34,59 @@ export const AdminDashboard: React.FC = () => {
   // Fetch all administrative data from the server
   const fetchAdminData = async (silent = false) => {
     if (!silent) setIsLoading(true);
+    let apiSuccess = false;
+
     try {
       const res = await fetch('/api/admin/data');
       if (res.ok) {
-        const data = await res.json();
-        setAppointments(data.appointments || []);
-        setQuotes(data.quotes || []);
-        setContacts(data.contacts || []);
-        setEmails(data.emails || []);
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          setAppointments(data.appointments || []);
+          setQuotes(data.quotes || []);
+          setContacts(data.contacts || []);
+          setEmails(data.emails || []);
+          setSmtpConfigured(!!data.smtpConfigured);
+          setBusinessOwnerEmail(data.businessOwnerEmail || 'design@verdaralandscapes.com');
+          apiSuccess = true;
+        }
       }
 
       const gRes = await fetch('/api/admin/google-status');
       if (gRes.ok) {
-        const gData = await gRes.json();
-        setGoogleStatus({
-          connected: gData.connected,
-          email: gData.email,
-          expiry: gData.expiry
-        });
+        const gContentType = gRes.headers.get('content-type');
+        if (gContentType && gContentType.includes('application/json')) {
+          const gData = await gRes.json();
+          setGoogleStatus({
+            connected: gData.connected,
+            email: gData.email,
+            expiry: gData.expiry
+          });
+        }
       }
     } catch (e) {
-      console.error('[Fetch Admin Data Fail]', e);
-    } finally {
-      setIsLoading(false);
+      console.warn('[Admin API Data Fetch Failed, falling back to direct Firestore query]', e);
     }
+
+    if (!apiSuccess) {
+      try {
+        console.log('[AdminDashboard] Querying Firestore directly for administration logs...');
+        const [backupApts, backupQuotes, backupContacts, backupEmails] = await Promise.all([
+          FirebaseClientService.getAppointmentsDirectly(),
+          FirebaseClientService.getQuotesDirectly(),
+          FirebaseClientService.getContactsDirectly(),
+          FirebaseClientService.getEmailsDirectly()
+        ]);
+        setAppointments(backupApts);
+        setQuotes(backupQuotes);
+        setContacts(backupContacts);
+        setEmails(backupEmails);
+      } catch (fbErr) {
+        console.error('[AdminDashboard Direct Firestore Load Failed]', fbErr);
+      }
+    }
+
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -115,6 +148,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Update Status Helpers
   const handleUpdateContactStatus = async (id: string, status: ContactSubmission['status']) => {
+    let apiSuccess = false;
     try {
       const res = await fetch(`/api/admin/contacts/${id}/status`, {
         method: 'POST',
@@ -122,14 +156,26 @@ export const AdminDashboard: React.FC = () => {
         body: JSON.stringify({ status })
       });
       if (res.ok) {
-        setContacts(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+        apiSuccess = true;
       }
     } catch (e) {
-      console.error(e);
+      console.warn('[Update Contact Status API Failed, checking fallback]', e);
+    }
+
+    // Always attempt direct write as sync or fallback
+    try {
+      await FirebaseClientService.updateContactStatusDirectly(id, status);
+      setContacts(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+    } catch (e) {
+      console.error('[Update Contact Status Fallback Failed]', e);
+      if (!apiSuccess) {
+        alert('Failed to update status. Please check your network and permissions.');
+      }
     }
   };
 
   const handleUpdateQuoteStatus = async (id: string, status: QuoteRequest['status']) => {
+    let apiSuccess = false;
     try {
       const res = await fetch(`/api/admin/quotes/${id}/status`, {
         method: 'POST',
@@ -137,14 +183,26 @@ export const AdminDashboard: React.FC = () => {
         body: JSON.stringify({ status })
       });
       if (res.ok) {
-        setQuotes(prev => prev.map(q => q.id === id ? { ...q, status } : q));
+        apiSuccess = true;
       }
     } catch (e) {
-      console.error(e);
+      console.warn('[Update Quote Status API Failed, checking fallback]', e);
+    }
+
+    // Always attempt direct write as sync or fallback
+    try {
+      await FirebaseClientService.updateQuoteStatusDirectly(id, status);
+      setQuotes(prev => prev.map(q => q.id === id ? { ...q, status } : q));
+    } catch (e) {
+      console.error('[Update Quote Status Fallback Failed]', e);
+      if (!apiSuccess) {
+        alert('Failed to update status. Please check your network and permissions.');
+      }
     }
   };
 
   const handleUpdateAppointmentStatus = async (id: string, status: AppointmentBooking['status']) => {
+    let apiSuccess = false;
     try {
       const res = await fetch(`/api/admin/appointments/${id}/update`, {
         method: 'POST',
@@ -152,10 +210,25 @@ export const AdminDashboard: React.FC = () => {
         body: JSON.stringify({ status })
       });
       if (res.ok) {
-        setAppointments(prev => prev.map(a => a.id === id ? { ...a, status, googleEventId: status === 'cancelled' ? undefined : a.googleEventId } : a));
+        apiSuccess = true;
       }
     } catch (e) {
-      console.error(e);
+      console.warn('[Update Appointment Status API Failed, checking fallback]', e);
+    }
+
+    // Always attempt direct write as sync or fallback
+    try {
+      const updates: Partial<AppointmentBooking> = { status };
+      if (status === 'cancelled') {
+        updates.googleEventId = undefined;
+      }
+      await FirebaseClientService.updateAppointmentDirectly(id, updates);
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status, googleEventId: status === 'cancelled' ? undefined : a.googleEventId } : a));
+    } catch (e) {
+      console.error('[Update Appointment Status Fallback Failed]', e);
+      if (!apiSuccess) {
+        alert('Failed to update status. Please check your network and permissions.');
+      }
     }
   };
 
@@ -658,6 +731,47 @@ export const AdminDashboard: React.FC = () => {
                     <div className="p-6 border-b border-[#E3DEC9] bg-[#FCFCFA] flex justify-between items-center">
                       <h3 className="font-serif font-bold text-lg text-[#0F1A12]">Branded System Outbox Logs</h3>
                       <span className="text-xs text-[#6D7870]">Real-time audit records of templates sent</span>
+                    </div>
+
+                    {/* SMTP Configuration Alert Panel */}
+                    <div className="p-6 bg-[#FCFCFA] border-b border-[#E3DEC9]">
+                      <div className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                        smtpConfigured 
+                          ? 'bg-emerald-50/40 border-emerald-200 text-[#0E4B28]' 
+                          : 'bg-amber-50/40 border-amber-200 text-[#6B4B0E]'
+                      }`}>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            {smtpConfigured ? (
+                              <div className="w-5.5 h-5.5 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px]">✓</div>
+                            ) : (
+                              <div className="w-5.5 h-5.5 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-[10px]">!</div>
+                            )}
+                            <h4 className="font-serif font-bold text-sm text-[#0F1A12]">
+                              {smtpConfigured ? 'Email dispatch system is live and active' : 'Emails are running in SIMULATION/SANDBOX mode'}
+                            </h4>
+                          </div>
+                          <p className="text-xs text-[#6D7870] leading-relaxed max-w-2xl mt-1">
+                            {smtpConfigured 
+                              ? `All quotation requests, general inquiries, and consultation confirmations are fully routed to live recipients, with carbon copies sent to: ${businessOwnerEmail}.` 
+                              : `Because SMTP variables are not set in your hosting platform, the website logs fully formatted emails to this interactive outbox. No actual mail is currently sent.`
+                            }
+                          </p>
+                        </div>
+                        {!smtpConfigured && (
+                          <div className="shrink-0 bg-white p-3 rounded-xl border border-amber-200/60 shadow-xs max-w-xs space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider block text-amber-800">To enable real emails:</span>
+                            <span className="text-[10px] text-[#6D7870] block leading-normal">
+                              Define these environment variables in your Vercel/hosting dashboard:
+                              <code className="block mt-1 font-mono text-[9px] bg-gray-50 p-1 rounded border leading-tight select-all">
+                                SMTP_HOST, SMTP_PORT,<br />
+                                SMTP_USER, SMTP_PASS,<br />
+                                BUSINESS_OWNER_EMAIL
+                              </code>
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {emails.length === 0 ? (

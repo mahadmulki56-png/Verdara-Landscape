@@ -367,7 +367,9 @@ app.get('/api/admin/data', (req, res) => {
     quotes: Database.getQuotes(),
     appointments: Database.getAppointments(),
     emails: Database.getEmails(),
-    googleAuth: Database.getGoogleAuth()
+    googleAuth: Database.getGoogleAuth(),
+    smtpConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS),
+    businessOwnerEmail: process.env.BUSINESS_OWNER_EMAIL || 'design@verdaralandscapes.com'
   });
 });
 
@@ -444,4 +446,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
