@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, Star, ShieldCheck, Gift, Compass, Award } from 'lucide-react';
 import { heroImg, featuredImg } from '../data';
+import { PremiumImage } from './PremiumImage';
 
 interface HeroProps {
   onOpenQuote: () => void;
@@ -206,11 +207,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenQuote, onViewWork }) => {
             whileHover="hover"
             className="relative rounded-[2.5rem] overflow-hidden w-full max-w-[450px] aspect-[4/5] bg-[#F4EFEA] border-[6px] border-white/20 shadow-2xl cursor-pointer group"
           >
-            <motion.img
-              variants={{
-                hover: { scale: 1.08, rotate: -0.5 }
-              }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            <PremiumImage
               src={heroImg}
               alt="Luxury garden landscape architecture by Verdara Landscapes"
               className="w-full h-full object-cover object-center"
@@ -257,9 +254,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenQuote, onViewWork }) => {
               className="bg-white/95 backdrop-blur-md p-3.5 rounded-3xl border border-[#E3DEC9] shadow-2xl flex items-center gap-3 max-w-[240px] select-none cursor-pointer transition-shadow hover:shadow-2xl"
             >
               <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-[#E3DEC9] group/thumb">
-                <motion.img
-                  whileHover={{ scale: 1.15, rotate: -2 }}
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                <PremiumImage
                   src={featuredImg}
                   alt="Mini project thumbnail"
                   className="w-full h-full object-cover"

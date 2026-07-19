@@ -16,10 +16,22 @@ import { TestimonialSection } from './components/TestimonialSection';
 import { Footer } from './components/Footer';
 import { QuoteDrawer } from './components/QuoteDrawer';
 import { AdminDashboard } from './components/AdminDashboard';
+import { ImageFocusProvider, useImageFocus } from './context/ImageFocusContext';
+import { PremiumHoverOverlay } from './components/PremiumHoverOverlay';
+import { ScrollReveal } from './components/ScrollReveal';
 
 export default function App() {
+  return (
+    <ImageFocusProvider>
+      <MainAppContent />
+    </ImageFocusProvider>
+  );
+}
+
+function MainAppContent() {
   const [isQuoteOpen, setIsQuoteOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
+  const { focusedImage } = useImageFocus();
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -66,39 +78,65 @@ export default function App() {
       <Navbar onOpenQuote={handleOpenQuote} />
 
       {/* Main Content Sections */}
-      <main className="relative">
+      <main className={`relative transition-all duration-500 ease-out ${focusedImage ? 'blur-[3px] opacity-75 scale-[0.992] pointer-events-none' : ''}`}>
         <Hero onOpenQuote={handleOpenQuote} onViewWork={handleViewWork} />
         
         <MarqueeTicker />
 
-        <TrustedBy />
+        <ScrollReveal>
+          <TrustedBy />
+        </ScrollReveal>
 
-        <BeliefSection />
+        <ScrollReveal>
+          <BeliefSection />
+        </ScrollReveal>
         
-        <Services onOpenQuote={handleOpenQuote} />
+        <ScrollReveal>
+          <Services onOpenQuote={handleOpenQuote} />
+        </ScrollReveal>
 
-        <EstimatorTool onOpenQuote={handleOpenQuote} />
+        <ScrollReveal>
+          <EstimatorTool onOpenQuote={handleOpenQuote} />
+        </ScrollReveal>
 
-        <BeforeAfter />
+        <ScrollReveal>
+          <BeforeAfter />
+        </ScrollReveal>
         
-        <FeaturedProject onOpenQuote={handleOpenQuote} />
+        <ScrollReveal>
+          <FeaturedProject onOpenQuote={handleOpenQuote} />
+        </ScrollReveal>
         
-        <Process />
+        <ScrollReveal>
+          <Process />
+        </ScrollReveal>
 
-        <FAQ />
+        <ScrollReveal>
+          <FAQ />
+        </ScrollReveal>
 
-        <BlogSection />
+        <ScrollReveal>
+          <BlogSection />
+        </ScrollReveal>
 
-        <Consultation />
+        <ScrollReveal>
+          <Consultation />
+        </ScrollReveal>
         
-        <TestimonialSection />
+        <ScrollReveal>
+          <TestimonialSection />
+        </ScrollReveal>
       </main>
 
       {/* Footer */}
       <Footer />
+
+      {/* Dynamic Cinematic Image Focus Portal Layer */}
+      <PremiumHoverOverlay />
 
       {/* Slide-over Quote Inquiry Drawer */}
       <QuoteDrawer isOpen={isQuoteOpen} onClose={handleCloseQuote} />
     </div>
   );
 }
+

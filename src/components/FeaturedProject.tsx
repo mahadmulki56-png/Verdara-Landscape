@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Calendar, Maximize, Clock, X, Check } from 'lucide-react';
 import { PROJECTS } from '../data';
 import { Project } from '../types';
+import { PremiumImage } from './PremiumImage';
 
 interface FeaturedProjectProps {
   onOpenQuote: () => void;
@@ -83,11 +84,7 @@ export const FeaturedProject: React.FC<FeaturedProjectProps> = ({ onOpenQuote })
               whileHover="hover"
               className="w-full h-full relative overflow-hidden"
             >
-              <motion.img
-                variants={{
-                  hover: { scale: 1.07, rotate: 0.5 }
-                }}
-                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              <PremiumImage
                 src={project.image}
                 alt={project.title}
                 className="w-full h-full object-cover object-center cursor-zoom-in"
@@ -135,14 +132,12 @@ export const FeaturedProject: React.FC<FeaturedProjectProps> = ({ onOpenQuote })
             >
               {/* Image banner header */}
               <div className="h-64 md:h-80 relative shrink-0 overflow-hidden group">
-                <motion.img
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover object-center cursor-zoom-in"
-                  referrerPolicy="no-referrer"
-                />
+              <PremiumImage
+                src={project.image}
+                alt={project.title}
+                className="w-full h-full object-cover object-center cursor-zoom-in"
+                referrerPolicy="no-referrer"
+              />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#FCFCFA] via-transparent to-black/40" />
                 <button
                   onClick={() => setShowCaseStudy(false)}

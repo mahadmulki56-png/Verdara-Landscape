@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BLOG_POSTS } from '../data';
 import { ArrowRight, Calendar, User, X, Clock, Bookmark, Share2 } from 'lucide-react';
+import { PremiumImage } from './PremiumImage';
 
 export const BlogSection: React.FC = () => {
   const [activePost, setActivePost] = useState<any | null>(null);
@@ -35,9 +36,7 @@ export const BlogSection: React.FC = () => {
               
               {/* Image Container */}
               <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
-                <motion.img
-                  whileHover={{ scale: 1.08, rotate: index % 2 === 0 ? 0.6 : -0.6 }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                <PremiumImage
                   src={post.image}
                   alt={post.title}
                   className="w-full h-full object-cover object-center cursor-pointer"
@@ -146,9 +145,7 @@ export const BlogSection: React.FC = () => {
 
                 {/* Cover Image */}
                 <div className="rounded-2xl overflow-hidden aspect-[16/9] w-full bg-gray-100 shadow-inner">
-                  <motion.img
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                  <PremiumImage
                     src={activePost.image}
                     alt={activePost.title}
                     className="w-full h-full object-cover object-center cursor-zoom-in"

@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { service1Img, service2Img, service3Img } from '../data';
 import { ShieldCheck, Heart, Award } from 'lucide-react';
 
+import { PremiumImage } from './PremiumImage';
+
 export const BeliefSection: React.FC = () => {
   const highlightPoints = [
     {
@@ -64,9 +66,7 @@ export const BeliefSection: React.FC = () => {
               transition={{ duration: 0.6, delay: i * 0.15 }}
               className={`${photo.span} rounded-[2rem] overflow-hidden border-4 border-white shadow-md hover:shadow-2xl transition-all hover:-translate-y-1 cursor-pointer group`}
             >
-              <motion.img
-                whileHover={{ scale: 1.08, rotate: i % 2 === 0 ? 0.8 : -0.8 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+              <PremiumImage
                 src={photo.src}
                 alt={photo.alt}
                 className="w-full h-full object-cover object-center"

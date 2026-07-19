@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, Clock, Facebook, Instagram, Twitter, Youtube, Heart, Sparkles } from 'lucide-react';
 import { service1Img, service2Img, service3Img, heroImg, featuredImg, mowerHeroImg } from '../data';
 import { VerdaraLogo } from './VerdaraLogo';
+import { PremiumImage } from './PremiumImage';
 
 export const Footer: React.FC = () => {
   const handleScroll = (href: string) => {
@@ -103,9 +104,7 @@ export const Footer: React.FC = () => {
                   key={index}
                   className="aspect-square rounded-lg overflow-hidden border border-white/5 bg-white/5 group relative cursor-pointer"
                 >
-                  <motion.img
-                    whileHover={{ scale: 1.15, rotate: index % 2 === 0 ? 1 : -1 }}
-                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                  <PremiumImage
                     src={photo}
                     alt={`Garden work instagram ${index}`}
                     className="w-full h-full object-cover object-center"

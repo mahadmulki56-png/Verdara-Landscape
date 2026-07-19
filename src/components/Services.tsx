@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, X, Sparkles, CheckCircle2 } from 'lucide-react';
 import { SERVICES } from '../data';
 import { Service } from '../types';
+import { PremiumImage } from './PremiumImage';
 
 interface ServicesProps {
   onOpenQuote: () => void;
@@ -83,9 +84,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuote }) => {
             >
               {/* Image Top */}
               <div className="h-[240px] overflow-hidden relative">
-                <motion.img
-                  whileHover={{ scale: 1.08, rotate: index % 2 === 0 ? 0.6 : -0.6 }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                <PremiumImage
                   src={service.image}
                   alt={service.title}
                   className="w-full h-full object-cover object-center cursor-pointer"
@@ -146,9 +145,7 @@ export const Services: React.FC<ServicesProps> = ({ onOpenQuote }) => {
             >
               {/* Image banner */}
               <div className="h-48 md:h-64 relative shrink-0 overflow-hidden">
-                <motion.img
-                  whileHover={{ scale: 1.06 }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                <PremiumImage
                   src={selectedService.image}
                   alt={selectedService.title}
                   className="w-full h-full object-cover object-center cursor-zoom-in"
